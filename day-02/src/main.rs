@@ -14,15 +14,11 @@ fn calculate_checksum(box_sequences: &[String]) -> u64 {
         for ch in box_sequence.chars() {
             *occurences.entry(ch).or_insert(0) += 1;
         }
-        box_2_letters_count += if occurences.values().any(|&v| v == 2) {
-            1
-        } else {
-            0
-        };
-        box_3_letters_count += if occurences.values().any(|&v| v == 3) {
-            1
-        } else {
-            0
+        if occurences.values().any(|&v| v == 2) {
+            box_2_letters_count += 1;
+        }
+        if occurences.values().any(|&v| v == 3) {
+            box_3_letters_count += 1;
         };
     }
 
