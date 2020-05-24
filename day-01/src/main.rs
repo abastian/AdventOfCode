@@ -1,28 +1,8 @@
 use std::{
     collections::HashSet,
-    fmt,
     fs::File,
-    io::{self, BufRead, BufReader, Error as IOError, Write},
+    io::{self, BufRead, BufReader, Error, Write},
 };
-
-#[derive(Debug)]
-enum Error {
-    IO(IOError),
-}
-
-impl From<IOError> for Error {
-    fn from(err: IOError) -> Self {
-        Error::IO(err)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Error::IO(ref err) => err.fmt(f),
-        }
-    }
-}
 
 fn acc_freq_changes(freq_changes: &[i64]) -> i64 {
     freq_changes.iter().sum()
@@ -51,14 +31,15 @@ fn main() -> Result<(), Error> {
         .filter_map(|line| line.ok().and_then(|s| s.parse::<i64>().ok()))
         .collect::<Vec<_>>();
 
-    let acc_freq = acc_freq_changes(&freq_changes);
-    let first_repeat_freq = first_repeat_acc_freq_changes(&freq_changes);
-
-    writeln!(io::stdout(), "accumulate freq: {}", acc_freq)?;
+    writeln!(
+        io::stdout(),
+        "accumulate freq: {}",
+        acc_freq_changes(&freq_changes)
+    )?;
     writeln!(
         io::stdout(),
         "first repeat accumulate freq: {}",
-        first_repeat_freq
+        first_repeat_acc_freq_changes(&freq_changes)
     )?;
     Ok(())
 }
