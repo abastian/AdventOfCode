@@ -1,30 +1,11 @@
+use anyhow::{anyhow, Context, Error, Result};
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
     hash::Hash,
     io::{self, BufRead, BufReader, Write},
-    num::ParseIntError,
     str::FromStr,
 };
-
-#[derive(Debug)]
-enum Error {
-    ParseInt(ParseIntError),
-    IO(io::Error),
-    Custom(&'static str),
-}
-
-impl From<ParseIntError> for Error {
-    fn from(err: ParseIntError) -> Self {
-        Error::ParseInt(err)
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::IO(err)
-    }
-}
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 struct Coordinate {
@@ -38,7 +19,7 @@ impl FromStr for Coordinate {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let xy = s.split(',').collect::<Vec<_>>();
         if xy.len() != 2 {
-            Err(Error::Custom("unparsable coordinate"))
+            Err(anyhow!("unparsable coordinate"))
         } else {
             Ok(Coordinate {
                 x: xy[0].trim().parse()?,
@@ -210,8 +191,8 @@ fn calculate_largest_areas_nearest_to_all_coordinates(
     areas
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let coordinates = reader

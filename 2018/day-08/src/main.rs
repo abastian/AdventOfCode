@@ -1,19 +1,8 @@
+use anyhow::{anyhow, Context, Error, Result};
 use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
 };
-
-#[derive(Debug)]
-enum Error {
-    IO(io::Error),
-    Custom(&'static str),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::IO(err)
-    }
-}
 
 struct Node {
     children: Vec<Node>,
@@ -33,7 +22,7 @@ fn construct_nodes(s: String) -> Result<Vec<Node>, Error> {
                     if let Some(metadata) = tokens.next() {
                         metadatas.push(metadata)
                     } else {
-                        return Err(Error::Custom("invalid end of data"));
+                        return Err(anyhow!("invalid end of data"));
                     }
                 }
                 let mut node = Node {
@@ -52,7 +41,7 @@ fn construct_nodes(s: String) -> Result<Vec<Node>, Error> {
                                 if let Some(metadata) = tokens.next() {
                                     unfinished_node.metadatas.push(metadata)
                                 } else {
-                                    return Err(Error::Custom("invalid end of data"));
+                                    return Err(anyhow!("invalid end of data"));
                                 }
                             }
                             unfinished_node.children.push(node);
@@ -78,7 +67,7 @@ fn construct_nodes(s: String) -> Result<Vec<Node>, Error> {
                 stack_nodes.push((child_qty, metadata_qty, node));
             }
             (None, None) => break,
-            _ => return Err(Error::Custom("invalid end of data")),
+            _ => return Err(anyhow!("invalid end of data")),
         }
     }
     Ok(nodes)
@@ -123,8 +112,8 @@ fn calculate_value_node(node: &Node) -> u32 {
     }
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     if let Some(s) = reader.lines().filter_map(|line| line.ok()).next() {

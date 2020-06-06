@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
@@ -34,8 +35,8 @@ fn reacting(mut polymer: impl Iterator<Item = u8>) -> String {
     String::from_utf8_lossy(&new_polymer).to_string()
 }
 
-fn main() -> Result<(), io::Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     if let Some(Ok(base_polymer)) = reader.lines().take(1).next() {

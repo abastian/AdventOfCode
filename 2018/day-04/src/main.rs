@@ -1,56 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 
+use anyhow::{anyhow, Context, Error, Result};
 use regex::Regex;
 use std::{
     collections::HashMap,
-    fmt,
     fs::File,
     io::{self, BufRead, BufReader, Write},
-    num::ParseIntError,
     str::FromStr,
 };
-
-#[derive(Debug)]
-enum GuardEventError {
-    IO(io::Error),
-    ParseInt(ParseIntError),
-    Custom(&'static str),
-    UnorderEvent,
-}
-
-impl fmt::Display for GuardEventError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            GuardEventError::IO(ref err) => write!(f, "IO error, caused by {:?}", err),
-            GuardEventError::ParseInt(ref err) => write!(f, "Failed to parse, caused by {:?}", err),
-            GuardEventError::Custom(msg) => write!(f, "error: {}", msg),
-            GuardEventError::UnorderEvent => write!(f, "detect unorder event"),
-        }
-    }
-}
-
-impl std::error::Error for GuardEventError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            GuardEventError::IO(ref err) => Some(err),
-            GuardEventError::ParseInt(ref err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-impl From<ParseIntError> for GuardEventError {
-    fn from(error: ParseIntError) -> Self {
-        GuardEventError::ParseInt(error)
-    }
-}
-
-impl From<io::Error> for GuardEventError {
-    fn from(error: io::Error) -> Self {
-        GuardEventError::IO(error)
-    }
-}
 
 #[derive(Eq, PartialEq, Ord, PartialOrd)]
 struct DateTime {
@@ -75,7 +33,7 @@ struct GuardEvent {
 }
 
 impl FromStr for GuardEvent {
-    type Err = GuardEventError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         lazy_static! {
@@ -110,20 +68,20 @@ impl FromStr for GuardEvent {
                 } else if &capture["action"] == "wakes up" {
                     EventKind::Wakeup
                 } else {
-                    return Err(GuardEventError::Custom("could not determine event kind"));
+                    return Err(anyhow!("could not determine event kind"));
                 }
             };
 
             Ok(GuardEvent { datetime, kind })
         } else {
-            Err(GuardEventError::Custom("unrecognized event"))
+            Err(anyhow!("unrecognized event"))
         }
     }
 }
 
 fn aggregate_minutes_sleep_per_guard(
     guard_events: &[GuardEvent],
-) -> Result<HashMap<GuardID, [u32; 60]>, GuardEventError> {
+) -> Result<HashMap<GuardID, [u32; 60]>> {
     let mut aggregates = HashMap::new();
 
     let mut current_guard = None;
@@ -133,13 +91,13 @@ fn aggregate_minutes_sleep_per_guard(
             EventKind::StartShift { guard_id } => current_guard = Some(guard_id),
             EventKind::Asleep => {
                 if current_guard.is_none() {
-                    return Err(GuardEventError::UnorderEvent);
+                    return Err(anyhow!("unordered event"));
                 }
                 current_asleep = Some(event.datetime.minute);
             }
             EventKind::Wakeup => {
                 if current_guard.is_none() || current_asleep.is_none() {
-                    return Err(GuardEventError::UnorderEvent);
+                    return Err(anyhow!("unordered event"));
                 }
                 let guard_id = current_guard.unwrap();
                 let asleep = current_asleep.unwrap();
@@ -186,25 +144,25 @@ fn find_most_minute_sleep(freqs: &[u32; 60]) -> Option<usize> {
 
 fn find_most_sleep_minute_for_most_sleep_guard(
     aggregates: &HashMap<GuardID, [u32; 60]>,
-) -> Result<(GuardID, usize), GuardEventError> {
+) -> Result<(GuardID, usize)> {
     if let Some(guard_id) = find_most_sleep_guard(aggregates) {
         if let Some(freqs) = aggregates.get(guard_id) {
             if let Some(minute) = find_most_minute_sleep(freqs) {
                 Ok((*guard_id, minute))
             } else {
-                Err(GuardEventError::Custom("can't find most minute sleep"))
+                Err(anyhow!("can't find most minute sleep"))
             }
         } else {
-            Err(GuardEventError::Custom("can't find sleep freqs"))
+            Err(anyhow!("can't find sleep freqs"))
         }
     } else {
-        Err(GuardEventError::Custom("can't find most sleepy guard"))
+        Err(anyhow!("can't find most sleepy guard"))
     }
 }
 
 fn find_most_sleep_minute_guard(
     aggregates: &HashMap<GuardID, [u32; 60]>,
-) -> Result<(GuardID, usize), GuardEventError> {
+) -> Result<(GuardID, usize)> {
     if let Some(((guard_id, minute), _)) = aggregates
         .iter()
         .flat_map(|(guard_id, freq_sleep_minutes)| {
@@ -218,14 +176,12 @@ fn find_most_sleep_minute_guard(
     {
         Ok((*guard_id, minute))
     } else {
-        Err(GuardEventError::Custom(
-            "can't find max freq sleep by minutes",
-        ))
+        Err(anyhow!("can't find max freq sleep by minutes",))
     }
 }
 
-fn main() -> Result<(), GuardEventError> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let mut guard_events = reader

@@ -1,45 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 
+use anyhow::{anyhow, Context, Error, Result};
 use regex::Regex;
 use std::{
     collections::HashMap,
-    fmt,
     fs::File,
-    io::{self, BufRead, BufReader, Error, Write},
-    num::ParseIntError,
+    io::{self, BufRead, BufReader, Write},
     str::FromStr,
 };
-
-#[derive(Debug)]
-enum ClaimError {
-    ParseInt(ParseIntError),
-    Custom(&'static str),
-}
-
-impl std::error::Error for ClaimError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            ClaimError::ParseInt(ref err) => Some(err),
-            ClaimError::Custom(_) => None,
-        }
-    }
-}
-
-impl fmt::Display for ClaimError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ClaimError::ParseInt(ref err) => write!(f, "Failed to parse, caused by {:?}", err),
-            ClaimError::Custom(msg) => write!(f, "error: {}", msg),
-        }
-    }
-}
-
-impl From<ParseIntError> for ClaimError {
-    fn from(error: ParseIntError) -> Self {
-        ClaimError::ParseInt(error)
-    }
-}
 
 struct Claim {
     id: u32,
@@ -84,7 +53,7 @@ impl Claim {
 }
 
 impl FromStr for Claim {
-    type Err = ClaimError;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         lazy_static! {
@@ -109,7 +78,7 @@ impl FromStr for Claim {
                 height: capture["height"].parse()?,
             })
         } else {
-            Err(ClaimError::Custom("unrecognized claim"))
+            Err(anyhow!("unrecognized claim"))
         }
     }
 }
@@ -143,8 +112,8 @@ fn find_first_non_overlap_claim<'claim, 'grid>(
     None
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
     let claims = reader
         .lines()

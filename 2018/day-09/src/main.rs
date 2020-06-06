@@ -1,27 +1,9 @@
+use anyhow::{Context, Result};
 use regex::Regex;
 use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
-    num::ParseIntError,
 };
-
-#[derive(Debug)]
-enum Error {
-    IO(io::Error),
-    ParseInt(ParseIntError),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::IO(err)
-    }
-}
-
-impl From<ParseIntError> for Error {
-    fn from(err: ParseIntError) -> Self {
-        Error::ParseInt(err)
-    }
-}
 
 fn calculate_highest_point(num_player: usize, last_point: u32) -> u64 {
     let mut points: Vec<u64> = vec![0; num_player];
@@ -41,8 +23,8 @@ fn calculate_highest_point(num_player: usize, last_point: u32) -> u64 {
     *points.iter().max().unwrap()
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     if let Some(s) = reader.lines().filter_map(|line| line.ok()).next() {

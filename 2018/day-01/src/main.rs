@@ -1,7 +1,8 @@
+use anyhow::{Context, Result};
 use std::{
     collections::HashSet,
     fs::File,
-    io::{self, BufRead, BufReader, Error, Write},
+    io::{self, BufRead, BufReader, Write},
 };
 
 fn acc_freq_changes(freq_changes: &[i64]) -> i64 {
@@ -23,8 +24,8 @@ fn first_repeat_acc_freq_changes(freq_changes: &[i64]) -> i64 {
     }
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
     let freq_changes = reader
         .lines()

@@ -1,32 +1,13 @@
 #[macro_use]
 extern crate lazy_static;
 
+use anyhow::{anyhow, Context, Error, Result};
 use regex::Regex;
 use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
-    num::ParseIntError,
     str::FromStr,
 };
-
-#[derive(Debug)]
-enum Error {
-    IO(io::Error),
-    ParseInt(ParseIntError),
-    Custom(&'static str),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::IO(err)
-    }
-}
-
-impl From<ParseIntError> for Error {
-    fn from(err: ParseIntError) -> Self {
-        Error::ParseInt(err)
-    }
-}
 
 struct PointChange {
     initial_x: i32,
@@ -63,7 +44,7 @@ impl FromStr for PointChange {
                 velocity_y: capture["velocity_y"].parse()?,
             })
         } else {
-            Err(Error::Custom("unrecognized point changes"))
+            Err(anyhow!("unrecognized point changes"))
         }
     }
 }
@@ -108,8 +89,8 @@ fn render_points(points: &[Point]) -> Option<String> {
     }
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let point_changes = reader
@@ -118,26 +99,27 @@ fn main() -> Result<(), Error> {
         .collect::<Vec<_>>();
 
     let mut sec = 0u32;
-    loop {
+    let mut in_range = false;
+    while !in_range {
         let points = calculate_points(&point_changes, sec);
-        sec += 1;
         if let Some(grid) = render_points(&points) {
+            in_range = true;
+            writeln!(io::stdout(), "grid at {} second(s)", sec)?;
             writeln!(io::stdout(), "{}", grid)?;
-            writeln!(io::stdout(), "grid at {} second(s)", sec - 1)?;
             writeln!(io::stdout(), "{}", "~".repeat(120))?;
-            break;
         }
+        sec += 1;
     }
     loop {
         let points = calculate_points(&point_changes, sec);
-        sec += 1;
         if let Some(grid) = render_points(&points) {
+            writeln!(io::stdout(), "grid at {} second(s)", sec)?;
             writeln!(io::stdout(), "{}", grid)?;
-            writeln!(io::stdout(), "grid at {} second(s)", sec - 1)?;
             writeln!(io::stdout(), "{}", "~".repeat(120))?;
         } else {
             break;
         }
+        sec += 1;
     }
     Ok(())
 }

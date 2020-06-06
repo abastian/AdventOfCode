@@ -1,54 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 
+use anyhow::{anyhow, Context, Error, Result};
 use regex::Regex;
 use std::{
-    char::ParseCharError,
     collections::HashMap,
-    fmt,
     fs::File,
     io::{self, BufRead, BufReader, Write},
     str::FromStr,
 };
-
-#[derive(Debug)]
-enum Error {
-    IO(io::Error),
-    ParseChar(ParseCharError),
-    Custom(&'static str),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::IO(err)
-    }
-}
-
-impl From<ParseCharError> for Error {
-    fn from(err: ParseCharError) -> Self {
-        Error::ParseChar(err)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match *self {
-            Error::IO(ref err) => write!(f, "IO Error: {}", err),
-            Error::ParseChar(ref err) => write!(f, "Parse Char Error: {}", err),
-            Error::Custom(ref msg) => write!(f, "custom error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            Error::IO(ref err) => Some(err),
-            Error::ParseChar(ref err) => Some(err),
-            _ => None,
-        }
-    }
-}
 
 type Step = char;
 
@@ -183,13 +143,13 @@ impl FromStr for Dependency {
                 successor: capture["successor"].parse()?,
             })
         } else {
-            Err(Error::Custom("unrecognized step requirement"))
+            Err(anyhow!("unrecognized step requirement"))
         }
     }
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let dependencies = reader

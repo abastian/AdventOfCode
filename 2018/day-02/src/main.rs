@@ -1,7 +1,8 @@
+use anyhow::{Context, Result};
 use std::{
     collections::HashMap,
     fs::File,
-    io::{self, BufRead, BufReader, Error, Write},
+    io::{self, BufRead, BufReader, Write},
 };
 
 fn calculate_checksum(box_sequences: &[String]) -> u64 {
@@ -55,8 +56,8 @@ fn find_first_near_identical_box(box_sequences: &[String]) -> Option<(&String, &
     None
 }
 
-fn main() -> Result<(), Error> {
-    let file = File::open("input/input.txt")?;
+fn main() -> Result<()> {
+    let file = File::open("input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
     let box_sequences = reader
         .lines()
