@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context, Result};
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{btree_map::Entry, BTreeMap},
     fs,
     io::{self, Write},
 };
@@ -108,14 +108,14 @@ impl From<(usize, usize)> for Location {
     }
 }
 
-fn scan_grids(lines: String) -> Result<(Grid, HashMap<Location, Cart>)> {
+fn scan_grids(lines: String) -> Result<(Grid, BTreeMap<Location, Cart>)> {
     let grid_proto = lines
         .lines()
         .map(|line| line.chars().collect::<Vec<char>>())
         .collect::<Vec<_>>();
 
     let mut grid: Grid = Vec::with_capacity(grid_proto.len());
-    let mut grid_carts: HashMap<Location, Cart> = HashMap::new();
+    let mut grid_carts: BTreeMap<Location, Cart> = BTreeMap::new();
 
     for (y, line) in (&grid_proto).iter().enumerate() {
         let mut y_grid: Vec<Option<Track>> = Vec::with_capacity(line.len());
@@ -334,11 +334,10 @@ fn scan_grids(lines: String) -> Result<(Grid, HashMap<Location, Cart>)> {
 
 fn tick(
     grid: &[Vec<Option<Track>>],
-    grid_carts: &mut HashMap<Location, Cart>,
+    grid_carts: &mut BTreeMap<Location, Cart>,
 ) -> Result<Vec<Location>> {
     let mut crash_locations = Vec::new();
-    let mut cart_locations = grid_carts.keys().cloned().collect::<Vec<_>>();
-    cart_locations.sort();
+    let cart_locations = grid_carts.keys().cloned().collect::<Vec<_>>();
 
     for location in cart_locations {
         if let Entry::Occupied(entry) = grid_carts.entry(location) {
