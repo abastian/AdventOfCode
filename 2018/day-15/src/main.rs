@@ -92,53 +92,42 @@ fn scan_grids(lines: String) -> Result<(Grid, BTreeMap<Location, Unit>)> {
 fn in_range_weakest_enemy(
     loc: &Location,
     units: &BTreeMap<Location, RefUnit>,
-    grid: &[Vec<Terrain>],
+    grids: &[Vec<Terrain>],
     enemy_race: Race,
 ) -> Option<(Location, RefUnit)> {
     let mut in_range_enemies = vec![];
+    let mut fill_enemy = |loc| {
+        if let Some(ref_unit) = units.get(&loc) {
+            let unit = ref_unit.borrow();
+            if unit.race == enemy_race && unit.hp > 0 {
+                in_range_enemies.push((loc, ref_unit.clone()))
+            };
+        }
+    };
+
     if loc.y > 0 {
-        let enemy_loc = Location {
+        fill_enemy(Location {
             y: loc.y - 1,
             x: loc.x,
-        };
-        if let Some(unit) = units.get(&enemy_loc) {
-            if unit.borrow().race == enemy_race && unit.borrow().hp > 0 {
-                in_range_enemies.push((enemy_loc, unit.clone()))
-            };
-        }
+        });
     }
-    if loc.y < grid.len() {
-        let enemy_loc = Location {
+    if loc.y < grids.len() {
+        fill_enemy(Location {
             y: loc.y + 1,
             x: loc.x,
-        };
-        if let Some(unit) = units.get(&enemy_loc) {
-            if unit.borrow().race == enemy_race && unit.borrow().hp > 0 {
-                in_range_enemies.push((enemy_loc, unit.clone()))
-            };
-        }
+        });
     }
     if loc.x > 0 {
-        let enemy_loc = Location {
+        fill_enemy(Location {
             y: loc.y,
             x: loc.x - 1,
-        };
-        if let Some(unit) = units.get(&enemy_loc) {
-            if unit.borrow().race == enemy_race && unit.borrow().hp > 0 {
-                in_range_enemies.push((enemy_loc, unit.clone()))
-            };
-        }
+        });
     }
-    if loc.x < grid[0].len() {
-        let enemy_loc = Location {
+    if loc.x < grids[0].len() {
+        fill_enemy(Location {
             y: loc.y,
             x: loc.x + 1,
-        };
-        if let Some(unit) = units.get(&enemy_loc) {
-            if unit.borrow().race == enemy_race && unit.borrow().hp > 0 {
-                in_range_enemies.push((enemy_loc, unit.clone()))
-            };
-        }
+        });
     }
 
     in_range_enemies.sort_by(|(eloc1, e1), (eloc2, e2)| {
@@ -149,10 +138,30 @@ fn in_range_weakest_enemy(
     in_range_enemies.get(0).map(|(l, e)| (*l, e.clone()))
 }
 
+fn fill_traces(
+    traces: &mut BTreeMap<Location, Trace>,
+    units: &BTreeMap<Location, RefUnit>,
+    grids: &[Vec<Terrain>],
+    loc: Location,
+    next_step: Location,
+    come_from: Direction,
+) {
+    if units.get(&loc).is_none() && grids[loc.y][loc.x] == Terrain::Space {
+        traces
+            .entry(loc)
+            .or_insert(Trace {
+                next_step,
+                comes_from: HashSet::new(),
+            })
+            .comes_from
+            .insert(come_from);
+    }
+}
+
 fn move_to_nearest_enemy(
     old_loc: &Location,
     units: &BTreeMap<Location, RefUnit>,
-    grid: &[Vec<Terrain>],
+    grids: &[Vec<Terrain>],
     enemy_race: Race,
 ) -> Option<Location> {
     let target_spots = units
@@ -160,29 +169,22 @@ fn move_to_nearest_enemy(
         .filter(|(_, u)| u.borrow().race == enemy_race)
         .flat_map(|(l, _)| {
             let mut spots = vec![];
+            let mut fill_spots = |spot| {
+                if units.get(&spot).is_none() && grids[spot.y][spot.x] == Terrain::Space {
+                    spots.push(spot);
+                }
+            };
             if l.y > 0 {
-                let spot = Location { y: l.y - 1, x: l.x };
-                if units.get(&spot).is_none() && grid[spot.y][spot.x] == Terrain::Space {
-                    spots.push(spot);
-                }
+                fill_spots(Location { y: l.y - 1, x: l.x });
             }
-            if l.y < grid.len() {
-                let spot = Location { y: l.y + 1, x: l.x };
-                if units.get(&spot).is_none() && grid[spot.y][spot.x] == Terrain::Space {
-                    spots.push(spot);
-                }
+            if l.y < grids.len() {
+                fill_spots(Location { y: l.y + 1, x: l.x });
             }
             if l.x > 0 {
-                let spot = Location { y: l.y, x: l.x - 1 };
-                if units.get(&spot).is_none() && grid[spot.y][spot.x] == Terrain::Space {
-                    spots.push(spot);
-                }
+                fill_spots(Location { y: l.y, x: l.x - 1 });
             }
-            if l.x < grid[0].len() {
-                let spot = Location { y: l.y, x: l.x + 1 };
-                if units.get(&spot).is_none() && grid[spot.y][spot.x] == Terrain::Space {
-                    spots.push(spot);
-                }
+            if l.x < grids[0].len() {
+                fill_spots(Location { y: l.y, x: l.x + 1 });
             }
             spots
         })
@@ -191,160 +193,116 @@ fn move_to_nearest_enemy(
     if !target_spots.is_empty() {
         let mut traces = BTreeMap::new();
         if old_loc.y > 0 {
-            let l = Location {
+            let loc = Location {
                 y: old_loc.y - 1,
                 x: old_loc.x,
             };
-            if target_spots.contains(&l) {
-                return Some(l);
+            if target_spots.contains(&loc) {
+                return Some(loc);
             }
-            if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                traces
-                    .entry(l)
-                    .or_insert(Trace {
-                        next_step: l,
-                        comes_from: HashSet::new(),
-                    })
-                    .comes_from
-                    .insert(Direction::Down);
-            }
+            fill_traces(&mut traces, units, grids, loc, loc, Direction::Down);
         }
         if old_loc.x > 0 {
-            let l = Location {
+            let loc = Location {
                 y: old_loc.y,
                 x: old_loc.x - 1,
             };
-            if target_spots.contains(&l) {
-                return Some(l);
+            if target_spots.contains(&loc) {
+                return Some(loc);
             }
-            if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                traces
-                    .entry(l)
-                    .or_insert(Trace {
-                        next_step: l,
-                        comes_from: HashSet::new(),
-                    })
-                    .comes_from
-                    .insert(Direction::Right);
-            }
+            fill_traces(&mut traces, units, grids, loc, loc, Direction::Right);
         }
-        if old_loc.x < grid[0].len() {
-            let l = Location {
+        if old_loc.x < grids[0].len() {
+            let loc = Location {
                 y: old_loc.y,
                 x: old_loc.x + 1,
             };
-            if target_spots.contains(&l) {
-                return Some(l);
+            if target_spots.contains(&loc) {
+                return Some(loc);
             }
-            if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                traces
-                    .entry(l)
-                    .or_insert(Trace {
-                        next_step: l,
-                        comes_from: HashSet::new(),
-                    })
-                    .comes_from
-                    .insert(Direction::Left);
-            }
+            fill_traces(&mut traces, units, grids, loc, loc, Direction::Left);
         }
-        if old_loc.y < grid.len() {
-            let l = Location {
+        if old_loc.y < grids.len() {
+            let loc = Location {
                 y: old_loc.y + 1,
                 x: old_loc.x,
             };
-            if target_spots.contains(&l) {
-                return Some(l);
+            if target_spots.contains(&loc) {
+                return Some(loc);
             }
-            if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                traces
-                    .entry(l)
-                    .or_insert(Trace {
-                        next_step: l,
-                        comes_from: HashSet::new(),
-                    })
-                    .comes_from
-                    .insert(Direction::Up);
-            }
+            fill_traces(&mut traces, units, grids, loc, loc, Direction::Up);
         }
 
         while !traces.is_empty() {
             let mut new_traces = BTreeMap::new();
             for (loc, trace) in traces.iter() {
                 if loc.y > 0 && !trace.comes_from.contains(&Direction::Up) {
-                    let l = Location {
+                    let loc = Location {
                         y: loc.y - 1,
                         x: loc.x,
                     };
-                    if target_spots.contains(&l) {
+                    if target_spots.contains(&loc) {
                         return Some(trace.next_step);
                     }
-                    if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                        new_traces
-                            .entry(l)
-                            .or_insert(Trace {
-                                next_step: trace.next_step,
-                                comes_from: HashSet::new(),
-                            })
-                            .comes_from
-                            .insert(Direction::Down);
-                    }
+                    fill_traces(
+                        &mut new_traces,
+                        units,
+                        grids,
+                        loc,
+                        trace.next_step,
+                        Direction::Down,
+                    );
                 }
                 if loc.x > 0 && !trace.comes_from.contains(&Direction::Left) {
-                    let l = Location {
+                    let loc = Location {
                         y: loc.y,
                         x: loc.x - 1,
                     };
-                    if target_spots.contains(&l) {
+                    if target_spots.contains(&loc) {
                         return Some(trace.next_step);
                     }
-                    if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                        new_traces
-                            .entry(l)
-                            .or_insert(Trace {
-                                next_step: trace.next_step,
-                                comes_from: HashSet::new(),
-                            })
-                            .comes_from
-                            .insert(Direction::Right);
-                    }
+                    fill_traces(
+                        &mut new_traces,
+                        units,
+                        grids,
+                        loc,
+                        trace.next_step,
+                        Direction::Right,
+                    );
                 }
-                if loc.x < grid[0].len() && !trace.comes_from.contains(&Direction::Right) {
-                    let l = Location {
+                if loc.x < grids[0].len() && !trace.comes_from.contains(&Direction::Right) {
+                    let loc = Location {
                         y: loc.y,
                         x: loc.x + 1,
                     };
-                    if target_spots.contains(&l) {
+                    if target_spots.contains(&loc) {
                         return Some(trace.next_step);
                     }
-                    if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                        new_traces
-                            .entry(l)
-                            .or_insert(Trace {
-                                next_step: trace.next_step,
-                                comes_from: HashSet::new(),
-                            })
-                            .comes_from
-                            .insert(Direction::Left);
-                    }
+                    fill_traces(
+                        &mut new_traces,
+                        units,
+                        grids,
+                        loc,
+                        trace.next_step,
+                        Direction::Left,
+                    );
                 }
-                if loc.y < grid.len() && !trace.comes_from.contains(&Direction::Down) {
-                    let l = Location {
+                if loc.y < grids.len() && !trace.comes_from.contains(&Direction::Down) {
+                    let loc = Location {
                         y: loc.y + 1,
                         x: loc.x,
                     };
-                    if target_spots.contains(&l) {
+                    if target_spots.contains(&loc) {
                         return Some(trace.next_step);
                     }
-                    if units.get(&l).is_none() && grid[l.y][l.x] == Terrain::Space {
-                        new_traces
-                            .entry(l)
-                            .or_insert(Trace {
-                                next_step: trace.next_step,
-                                comes_from: HashSet::new(),
-                            })
-                            .comes_from
-                            .insert(Direction::Up);
-                    }
+                    fill_traces(
+                        &mut new_traces,
+                        units,
+                        grids,
+                        loc,
+                        trace.next_step,
+                        Direction::Up,
+                    );
                 }
             }
 
@@ -355,7 +313,7 @@ fn move_to_nearest_enemy(
     None
 }
 
-fn rounds(grid: &[Vec<Terrain>], units: &mut BTreeMap<Location, RefUnit>) -> bool {
+fn rounds(grids: &[Vec<Terrain>], units: &mut BTreeMap<Location, RefUnit>) -> bool {
     let any_elf = units.values().any(|u| u.borrow().race == Race::Elf);
     let any_goblin = units.values().any(|u| u.borrow().race == Race::Goblin);
 
@@ -370,12 +328,13 @@ fn rounds(grid: &[Vec<Terrain>], units: &mut BTreeMap<Location, RefUnit>) -> boo
                         Race::Elf => Race::Goblin,
                         Race::Goblin => Race::Elf,
                     };
-                    let enemy = in_range_weakest_enemy(loc, units, grid, enemy_race);
+                    let enemy = in_range_weakest_enemy(loc, units, grids, enemy_race);
                     if enemy.is_none() {
-                        if let Some(new_loc) = move_to_nearest_enemy(loc, units, grid, enemy_race) {
+                        if let Some(new_loc) = move_to_nearest_enemy(loc, units, grids, enemy_race)
+                        {
                             units.remove(loc);
                             units.insert(new_loc, unit.clone());
-                            in_range_weakest_enemy(&new_loc, units, grid, enemy_race)
+                            in_range_weakest_enemy(&new_loc, units, grids, enemy_race)
                         } else {
                             None
                         }
@@ -400,13 +359,13 @@ fn rounds(grid: &[Vec<Terrain>], units: &mut BTreeMap<Location, RefUnit>) -> boo
 
 fn main() -> Result<()> {
     let content = fs::read_to_string("input/input.txt").context("failed to read input file")?;
-    let (grid, units) = scan_grids(content)?;
+    let (grids, units) = scan_grids(content)?;
     let mut units_part1 = units
         .iter()
         .map(|(l, u)| (*l, Rc::new(RefCell::new(u.clone()))))
         .collect::<BTreeMap<_, _>>();
     let mut round = 0usize;
-    while rounds(&grid, &mut units_part1) {
+    while rounds(&grids, &mut units_part1) {
         round += 1;
     }
     let total_hp = units_part1.values().map(|u| u.borrow().hp).sum::<u32>();
@@ -439,7 +398,7 @@ fn main() -> Result<()> {
             })
             .collect::<BTreeMap<_, _>>();
         let mut round = 0usize;
-        while rounds(&grid, &mut units_part2) {
+        while rounds(&grids, &mut units_part2) {
             round += 1;
         }
         let winner_race = units_part2.values().next().unwrap().borrow().race;
