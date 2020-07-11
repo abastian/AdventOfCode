@@ -2,9 +2,9 @@
 # It is not intended for manual editing.
 [[package]]
 name = "aho-corasick"
-version = "0.7.10"
+version = "0.7.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8716408b8bc624ed7f65d223ddb9ac2d044c0547b6fa4b0d554f3a9540496ada"
+checksum = "043164d8ba5c4c3035fec9bbee8647c0261d788f3474306f93bb65901cae0e86"
 dependencies = [
  "memchr",
 ]
@@ -16,12 +16,126 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85bb70cc08ec97ca5450e6eba421deeea5f172c0fc61f78b5357b2a8e8be195f"
 
 [[package]]
-name = "day-12"
+name = "aoc-2018-day01"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day02"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day03"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "lazy_static",
  "regex",
+]
+
+[[package]]
+name = "aoc-2018-day04"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "aoc-2018-day05"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day06"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day07"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "aoc-2018-day08"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day09"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "regex",
+]
+
+[[package]]
+name = "aoc-2018-day10"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "aoc-2018-day11"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day12"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "aoc-2018-day13"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day14"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day15"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
+name = "aoc-2018-day16"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
 ]
 
 [[package]]
