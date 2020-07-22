@@ -7,6 +7,7 @@ use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::{self, BufRead, BufReader, Write},
+    rc::Rc,
 };
 
 #[derive(Debug)]
@@ -24,7 +25,7 @@ struct Sample {
     output_registers: [u64; 4],
 }
 
-type Opcode = fn(&[u64; 4], u8, u8) -> u64;
+type Opcode = Rc<fn(&[u64; 4], u8, u8) -> u64>;
 
 fn extract_input(input_path: &str) -> Result<(Vec<Sample>, Vec<Operation>)> {
     lazy_static! {
@@ -140,8 +141,9 @@ fn group_samples(
 }
 
 fn mapping_opcode_function(
+    instructions: &HashMap<String, Opcode>,
     pair_opcode_candidates: Vec<(u8, Vec<String>)>,
-) -> Result<HashMap<u8, String>> {
+) -> Result<HashMap<u8, Opcode>> {
     let mut reduce_opcode_candidates =
         pair_opcode_candidates
             .iter()
@@ -184,7 +186,7 @@ fn mapping_opcode_function(
                 .for_each(|candidates| {
                     candidates.remove(&function_name);
                 });
-            result.insert(opcode_id, function_name);
+            result.insert(opcode_id, instructions[&function_name].clone());
         }
     }
 
@@ -203,52 +205,82 @@ fn mapping_opcode_function(
 fn main() -> Result<()> {
     let instructions: HashMap<String, Opcode> = {
         let inner: [(String, Opcode); 16] = [
-            ("addr".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize].saturating_add(registers[in_b as usize])
-            }),
-            ("addi".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize].saturating_add(in_b as _)
-            }),
-            ("mulr".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize].saturating_mul(registers[in_b as usize])
-            }),
-            ("muli".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize].saturating_mul(in_b as _)
-            }),
-            ("banr".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize] & registers[in_b as usize]
-            }),
-            ("bani".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize] & in_b as u64
-            }),
-            ("borr".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize] | registers[in_b as usize]
-            }),
-            ("bori".to_string(), |registers, in_a, in_b| {
-                registers[in_a as usize] | in_b as u64
-            }),
-            ("setr".to_string(), |registers, in_a, _in_b| {
-                registers[in_a as usize]
-            }),
-            ("seti".to_string(), |_registers, in_a, _in_b| in_a as _),
-            ("gtir".to_string(), |registers, in_a, in_b| {
-                (in_a as u64 > registers[in_b as usize]) as _
-            }),
-            ("gtri".to_string(), |registers, in_a, in_b| {
-                (registers[in_a as usize] > in_b as _) as _
-            }),
-            ("gtrr".to_string(), |registers, in_a, in_b| {
-                (registers[in_a as usize] > registers[in_b as usize]) as _
-            }),
-            ("eqir".to_string(), |registers, in_a, in_b| {
-                (in_a as u64 == registers[in_b as usize]) as _
-            }),
-            ("eqri".to_string(), |registers, in_a, in_b| {
-                (registers[in_a as usize] == in_b as _) as _
-            }),
-            ("eqrr".to_string(), |registers, in_a, in_b| {
-                (registers[in_a as usize] == registers[in_b as usize]) as _
-            }),
+            (
+                "addr".to_string(),
+                Rc::new(|registers, in_a, in_b| {
+                    registers[in_a as usize].saturating_add(registers[in_b as usize])
+                }),
+            ),
+            (
+                "addi".to_string(),
+                Rc::new(|registers, in_a, in_b| registers[in_a as usize].saturating_add(in_b as _)),
+            ),
+            (
+                "mulr".to_string(),
+                Rc::new(|registers, in_a, in_b| {
+                    registers[in_a as usize].saturating_mul(registers[in_b as usize])
+                }),
+            ),
+            (
+                "muli".to_string(),
+                Rc::new(|registers, in_a, in_b| registers[in_a as usize].saturating_mul(in_b as _)),
+            ),
+            (
+                "banr".to_string(),
+                Rc::new(|registers, in_a, in_b| {
+                    registers[in_a as usize] & registers[in_b as usize]
+                }),
+            ),
+            (
+                "bani".to_string(),
+                Rc::new(|registers, in_a, in_b| registers[in_a as usize] & in_b as u64),
+            ),
+            (
+                "borr".to_string(),
+                Rc::new(|registers, in_a, in_b| {
+                    registers[in_a as usize] | registers[in_b as usize]
+                }),
+            ),
+            (
+                "bori".to_string(),
+                Rc::new(|registers, in_a, in_b| registers[in_a as usize] | in_b as u64),
+            ),
+            (
+                "setr".to_string(),
+                Rc::new(|registers, in_a, _in_b| registers[in_a as usize]),
+            ),
+            (
+                "seti".to_string(),
+                Rc::new(|_registers, in_a, _in_b| in_a as _),
+            ),
+            (
+                "gtir".to_string(),
+                Rc::new(|registers, in_a, in_b| (in_a as u64 > registers[in_b as usize]) as _),
+            ),
+            (
+                "gtri".to_string(),
+                Rc::new(|registers, in_a, in_b| (registers[in_a as usize] > in_b as _) as _),
+            ),
+            (
+                "gtrr".to_string(),
+                Rc::new(|registers, in_a, in_b| {
+                    (registers[in_a as usize] > registers[in_b as usize]) as _
+                }),
+            ),
+            (
+                "eqir".to_string(),
+                Rc::new(|registers, in_a, in_b| (in_a as u64 == registers[in_b as usize]) as _),
+            ),
+            (
+                "eqri".to_string(),
+                Rc::new(|registers, in_a, in_b| (registers[in_a as usize] == in_b as _) as _),
+            ),
+            (
+                "eqrr".to_string(),
+                Rc::new(|registers, in_a, in_b| {
+                    (registers[in_a as usize] == registers[in_b as usize]) as _
+                }),
+            ),
         ];
 
         inner.iter().cloned().collect()
@@ -267,10 +299,10 @@ fn main() -> Result<()> {
         count_three_above
     )?;
 
-    let map_opcode_name = mapping_opcode_function(pair_opcode_candidates)?;
+    let map_opcodes = mapping_opcode_function(&instructions, pair_opcode_candidates)?;
     let mut registers = [0u64; 4];
     for operation in operations {
-        let function = instructions[&map_opcode_name[&operation.opcode_id]];
+        let function = map_opcodes[&operation.opcode_id].clone();
         registers[operation.out as usize] = function(&registers, operation.in_a, operation.in_b);
     }
 
