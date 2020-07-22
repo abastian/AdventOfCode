@@ -115,7 +115,8 @@ fn render_n_generation(input_exercise: &InputExercise, n: usize) -> Result<PotsM
 }
 
 fn main() -> Result<()> {
-    let content = fs::read_to_string("input/input.txt").context("failed to read input file")?;
+    let content =
+        fs::read_to_string("2018/day-12/input/input.txt").context("failed to read input file")?;
     let input_exercise = content.parse::<InputExercise>()?;
 
     let pots_model = render_n_generation(&input_exercise, 20)?;

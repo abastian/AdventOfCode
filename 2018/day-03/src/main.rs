@@ -113,7 +113,7 @@ fn find_first_non_overlap_claim<'claim, 'grid>(
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-03/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
     let claims = reader
         .lines()

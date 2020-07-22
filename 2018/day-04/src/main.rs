@@ -181,7 +181,7 @@ fn find_most_sleep_minute_guard(
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-04/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let mut guard_events = reader

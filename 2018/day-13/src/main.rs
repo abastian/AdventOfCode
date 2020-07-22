@@ -359,7 +359,8 @@ fn tick(
 }
 
 fn main() -> Result<()> {
-    let content = fs::read_to_string("input/input.txt").context("failed to read input file")?;
+    let content =
+        fs::read_to_string("2018/day-13/input/input.txt").context("failed to read input file")?;
     let (grid, mut grid_carts) = scan_grids(content)?;
 
     loop {

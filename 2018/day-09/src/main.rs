@@ -24,7 +24,7 @@ fn calculate_highest_point(num_player: usize, last_point: u32) -> u64 {
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-09/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     if let Some(s) = reader.lines().filter_map(|line| line.ok()).next() {

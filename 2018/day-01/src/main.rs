@@ -25,7 +25,7 @@ fn first_repeat_acc_freq_changes(freq_changes: &[i64]) -> i64 {
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-01/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
     let freq_changes = reader
         .lines()

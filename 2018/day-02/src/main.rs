@@ -57,7 +57,7 @@ fn find_first_near_identical_box(box_sequences: &[String]) -> Option<(&String, &
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-02/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
     let box_sequences = reader
         .lines()

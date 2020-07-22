@@ -113,7 +113,7 @@ fn calculate_value_node(node: &Node) -> u32 {
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-08/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     if let Some(s) = reader.lines().filter_map(|line| line.ok()).next() {

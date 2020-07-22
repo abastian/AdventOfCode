@@ -192,7 +192,7 @@ fn calculate_largest_areas_nearest_to_all_coordinates(
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-06/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let coordinates = reader

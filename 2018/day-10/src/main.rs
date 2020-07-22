@@ -90,7 +90,7 @@ fn render_points(points: &[Point]) -> Option<String> {
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-10/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let point_changes = reader

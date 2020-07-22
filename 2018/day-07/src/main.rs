@@ -149,7 +149,7 @@ impl FromStr for Dependency {
 }
 
 fn main() -> Result<()> {
-    let file = File::open("input/input.txt").context("failed to read input file")?;
+    let file = File::open("2018/day-07/input/input.txt").context("failed to read input file")?;
     let reader = BufReader::new(file);
 
     let dependencies = reader

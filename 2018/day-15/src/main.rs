@@ -358,7 +358,8 @@ fn rounds(grids: &[Vec<Terrain>], units: &mut BTreeMap<Location, RefUnit>) -> bo
 }
 
 fn main() -> Result<()> {
-    let content = fs::read_to_string("input/input.txt").context("failed to read input file")?;
+    let content =
+        fs::read_to_string("2018/day-15/input/input.txt").context("failed to read input file")?;
     let (grids, units) = scan_grids(content)?;
     let mut units_part1 = units
         .iter()
