@@ -145,6 +145,8 @@ name = "aoc-2018-day17"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "lazy_static",
+ "regex",
 ]
 
 [[package]]
