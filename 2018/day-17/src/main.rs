@@ -123,6 +123,11 @@ impl RangeCoordinates {
     }
 }
 
+const CLAY_WALL: u8 = b'#';
+const SAND_SPACE: u8 = b'.';
+const WATER_FALL: u8 = b'|';
+const WATER_FILL: u8 = b'~';
+
 fn render_input<P: AsRef<Path>>(path: P) -> Result<Grid> {
     let file = File::open(path).context("failed to read input file")?;
     let reader = BufReader::new(file);
@@ -134,9 +139,9 @@ fn render_input<P: AsRef<Path>>(path: P) -> Result<Grid> {
         .collect::<Vec<_>>();
     let farthest_coordinate = clay_coordinates.iter().max().unwrap();
 
-    let mut result = vec![vec![b'.'; farthest_coordinate.x + 2]; farthest_coordinate.y + 1];
+    let mut result = vec![vec![SAND_SPACE; farthest_coordinate.x + 2]; farthest_coordinate.y + 1];
     clay_coordinates.iter().for_each(|c| {
-        result[c.y][c.x] = b'#';
+        result[c.y][c.x] = CLAY_WALL;
     });
     result[0][500] = b'+';
     Ok(result)
@@ -157,13 +162,13 @@ fn water_fill(grid: &mut Grid, source: Coordinate) -> Result<bool> {
             let mut x_left = x - 1;
             loop {
                 while x_left > 0
-                    && grid[y][x_left] == b'.'
-                    && (grid[y + 1][x_left] == b'#' || grid[y + 1][x_left] == b'~')
+                    && grid[y][x_left] == SAND_SPACE
+                    && (grid[y + 1][x_left] == CLAY_WALL || grid[y + 1][x_left] == WATER_FILL)
                 {
                     x_left -= 1;
                 }
                 if x_left == 0 {
-                    if grid[y + 1][x_left] == b'.' {
+                    if grid[y + 1][x_left] == SAND_SPACE {
                         water_fall(grid, Coordinate { x: x_left, y })?;
                     }
                     break EdgeState {
@@ -172,22 +177,22 @@ fn water_fill(grid: &mut Grid, source: Coordinate) -> Result<bool> {
                     };
                 } else {
                     match grid[y][x_left] {
-                        b'.' => {
+                        SAND_SPACE => {
                             water_fall(grid, Coordinate { x: x_left, y })?;
-                            if grid[y + 1][x_left] == b'|' {
+                            if grid[y + 1][x_left] == WATER_FALL {
                                 break EdgeState {
                                     x: x_left,
                                     open: true,
                                 };
                             }
                         }
-                        b'#' => {
+                        CLAY_WALL => {
                             break EdgeState {
                                 x: x_left + 1,
                                 open: false,
                             };
                         }
-                        b'|' => {
+                        WATER_FALL => {
                             break EdgeState {
                                 x: x_left + 1,
                                 open: true,
@@ -211,13 +216,13 @@ fn water_fill(grid: &mut Grid, source: Coordinate) -> Result<bool> {
             let mut x_right = x + 1;
             loop {
                 while x_right < x_upper
-                    && grid[y][x_right] == b'.'
-                    && (grid[y + 1][x_right] == b'#' || grid[y + 1][x_right] == b'~')
+                    && grid[y][x_right] == SAND_SPACE
+                    && (grid[y + 1][x_right] == CLAY_WALL || grid[y + 1][x_right] == WATER_FILL)
                 {
                     x_right += 1;
                 }
                 if x_right == x_upper {
-                    if grid[y + 1][x_right] == b'.' {
+                    if grid[y + 1][x_right] == SAND_SPACE {
                         water_fall(grid, Coordinate { x: x_right, y })?;
                     }
                     break EdgeState {
@@ -226,22 +231,22 @@ fn water_fill(grid: &mut Grid, source: Coordinate) -> Result<bool> {
                     };
                 } else {
                     match grid[y][x_right] {
-                        b'.' => {
+                        SAND_SPACE => {
                             water_fall(grid, Coordinate { x: x_right, y })?;
-                            if grid[y + 1][x_right] == b'|' {
+                            if grid[y + 1][x_right] == WATER_FALL {
                                 break EdgeState {
                                     x: x_right,
                                     open: true,
                                 };
                             }
                         }
-                        b'#' => {
+                        CLAY_WALL => {
                             break EdgeState {
                                 x: x_right - 1,
                                 open: false,
                             };
                         }
-                        b'|' => {
+                        WATER_FALL => {
                             break EdgeState {
                                 x: x_right - 1,
                                 open: true,
@@ -261,10 +266,10 @@ fn water_fill(grid: &mut Grid, source: Coordinate) -> Result<bool> {
         };
 
         if !left.open && !right.open {
-            (left.x..=right.x).for_each(|x| grid[y][x] = b'~');
+            (left.x..=right.x).for_each(|x| grid[y][x] = WATER_FILL);
             Ok(true)
         } else {
-            (left.x..=right.x).for_each(|x| grid[y][x] = b'|');
+            (left.x..=right.x).for_each(|x| grid[y][x] = WATER_FALL);
             Ok(false)
         }
     }
@@ -285,9 +290,9 @@ fn water_fall(grid: &mut Grid, source: Coordinate) -> Result<()> {
     let mut y = y_lower;
     loop {
         match grid[y][x] {
-            b'.' => grid[y][x] = b'|',
-            b'~' | b'#' => break Ok(()),
-            b'|' => return Ok(()),
+            SAND_SPACE => grid[y][x] = WATER_FALL,
+            WATER_FILL | CLAY_WALL => break Ok(()),
+            WATER_FALL => return Ok(()),
             terrain => {
                 break Err(anyhow!(
                     "unexpected terrain: {} @({}, {})",
@@ -326,7 +331,7 @@ fn main() -> Result<()> {
         .iter()
         .enumerate()
         .filter_map(|(idx, line)| {
-            if line.contains(&b'#') {
+            if line.contains(&CLAY_WALL) {
                 Some(idx)
             } else {
                 None
@@ -339,13 +344,17 @@ fn main() -> Result<()> {
     let water_coverage = grid
         .iter()
         .skip(y_lower)
-        .map(|line| line.iter().filter(|v| **v == b'|' || **v == b'~').count())
+        .map(|line| {
+            line.iter()
+                .filter(|v| **v == WATER_FALL || **v == WATER_FILL)
+                .count()
+        })
         .sum::<usize>();
     writeln!(io::stdout(), "water coverage is {}", water_coverage)?;
 
     let water_left_coverage = grid
         .iter()
-        .map(|line| line.iter().filter(|v| **v == b'~').count())
+        .map(|line| line.iter().filter(|v| **v == WATER_FILL).count())
         .sum::<usize>();
     writeln!(
         io::stdout(),
